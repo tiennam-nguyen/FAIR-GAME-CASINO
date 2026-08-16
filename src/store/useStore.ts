@@ -16,6 +16,7 @@ interface AppState {
 
   seasonPreference: SeasonPreference;
   setSeasonPreference: (preference: SeasonPreference) => void;
+  activeRoomId: string | null;
 
   currentRoom: Room | null;
   setCurrentRoom: (room: Room | null) => void;
@@ -61,8 +62,14 @@ export const useStore = create<AppState>()(
       seasonPreference: 'auto',
       setSeasonPreference: (seasonPreference) => set({ seasonPreference }),
 
+      activeRoomId: null,
+
       currentRoom: null,
-      setCurrentRoom: (currentRoom) => set({ currentRoom }),
+      setCurrentRoom: (currentRoom) =>
+        set({
+          currentRoom,
+          activeRoomId: currentRoom?.id ?? null,
+        }),
 
       players: [],
       setPlayers: (players) => set({ players }),
@@ -97,6 +104,7 @@ export const useStore = create<AppState>()(
 
       resetRoomState: () =>
         set({
+          activeRoomId: null,
           currentRoom: null,
           players: [],
           transactions: [],
@@ -111,9 +119,10 @@ export const useStore = create<AppState>()(
     {
       name: 'song-phang-storage',
       partialize: (state) => ({
-        userProfile: state.userProfile,
-        seasonPreference: state.seasonPreference,
-      }),
+      userProfile: state.userProfile,
+      seasonPreference: state.seasonPreference,
+      activeRoomId: state.activeRoomId,
+    }),
     }
   )
 );

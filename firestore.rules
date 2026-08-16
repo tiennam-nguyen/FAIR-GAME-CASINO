@@ -92,8 +92,10 @@ service cloud.firestore {
     }
 
     match /rooms/{roomId} {
-      // A signed-in user needs room metadata to join by code.
-      allow read: if signedIn();
+      // A signed-in user may open a room directly by room code,
+      // but may not list/query all rooms.
+      allow get: if signedIn();
+      allow list: if false;
 
       allow create: if signedIn() &&
         request.resource.data.hostId == request.auth.uid &&
@@ -107,7 +109,13 @@ service cloud.firestore {
       allow delete: if false;
 
       match /players/{playerId} {
-        allow read: if isMember(roomId) || isHost(roomId);
+        allow get: if signedIn() && (
+        playerId == request.auth.uid ||
+        isMember(roomId) ||
+        isHost(roomId)
+      );
+
+        allow list: if isMember(roomId) || isHost(roomId);
 
         // Player creation must be coupled to room creation or an atomic playerCount increment.
         allow create: if signedIn() &&

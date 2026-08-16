@@ -177,6 +177,21 @@ export async function getRoom(roomId: string): Promise<Room | null> {
   return roomSnap.exists() ? ({ id: roomSnap.id, ...roomSnap.data() } as Room) : null;
 }
 
+export async function getPlayer(
+  roomId: string,
+  playerId: string
+): Promise<Player | null> {
+  if (!db) throw new Error('Firestore chưa sẵn sàng.');
+
+  const normalizedRoomId = roomId.trim().toUpperCase();
+  const playerRef = doc(db, 'rooms', normalizedRoomId, 'players', playerId);
+  const playerSnap = await getDoc(playerRef);
+
+  return playerSnap.exists()
+    ? ({ ...playerSnap.data() } as Player)
+    : null;
+}
+
 export async function updateRoomStatus(roomId: string, status: Room['status']): Promise<void> {
   if (!db) throw new Error('Firestore chưa sẵn sàng.');
   await updateDoc(doc(db, 'rooms', roomId), {
