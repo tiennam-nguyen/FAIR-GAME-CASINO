@@ -1,78 +1,272 @@
-# 🎲 Sòng Phẳng
+# 🎲 Sòng Phẳng — Four Seasons
 
-**Sòng Phẳng** là web app mobile-first để một nhóm bạn ghi kết quả ván chơi, theo dõi số dư theo thời gian thực và rút gọn các khoản cần chuyển khi chốt sổ.
+**Sòng Phẳng** là web app mobile-first giúp một nhóm bạn **ghi kết quả từng ván, theo dõi số dư theo thời gian thực và chốt sổ gọn hơn** sau cuộc chơi.
 
-> Mục tiêu của app là **ghi chép minh bạch**. App không xử lý tiền, không xác nhận giao dịch ngân hàng và không thay thế trách nhiệm tuân thủ pháp luật tại nơi sử dụng.
+> **Bản hiện tại đang được mở để test thực tế.** Nếu bạn dùng thử, điều mình cần nhất là feedback về việc tạo/vào phòng, cập nhật realtime, nhập điểm, reload trang, Undo và chốt sổ.
 
-## ✨ Bản Four Seasons
+🌐 **Dùng thử:** https://fair-game-casino.vercel.app
 
-Giao diện không còn khóa vào Tết. App có 4 theme **Xuân / Hạ / Thu / Đông**, tự chọn theo tháng trên thiết bị hoặc cho phép đổi thủ công. Theme được lưu cục bộ để lần sau vẫn giữ lựa chọn.
+---
 
-Các flow chính đã được làm lại cho mobile:
+## Sòng Phẳng dùng để làm gì?
 
-- **Tạo phòng:** host được thêm vào phòng ngay trong cùng batch tạo phòng.
-- **Vào phòng:** tối đa 4 người; vào lại bằng cùng Firebase anonymous UID không reset điểm.
-- **Tiến Lên:** chủ phòng xếp đủ 4 hạng, thêm tiền phạt và app kiểm tra zero-sum.
-- **Xì Dách:** nhập phần thắng/thua của người chơi; phần nhà cái được tính tự động để tổng bằng 0.
-- **Undo:** chỉ hoàn tác **ván gần nhất**, tránh tạo trùng số thứ tự ván.
-- **Rời phòng:** chỉ đổi trạng thái presence, không xóa player/số dư khỏi sổ.
-- **Chốt sổ:** cấn nợ thành các khoản chuyển trực tiếp và tạo VietQR cho người nhận.
-- **Ledger là nguồn sự thật:** bảng điểm và chốt sổ được tái dựng từ lịch sử ván; `currentScore` trong player document chỉ còn là field tương thích dữ liệu cũ.
-- **Đóng sổ:** chuyển phòng sang `closed` nhưng **không xóa lịch sử**, để còn đối soát.
+Khi chơi theo nhóm, phần dễ rối nhất thường không phải luật chơi mà là **ai đang lời, ai đang lỗ, ván vừa rồi tính thế nào và cuối cùng ai cần chuyển cho ai**.
 
-## 🧠 Quy tắc tính tiền
+Sòng Phẳng tập trung vào đúng phần đó:
+
+- tạo một phòng chung bằng mã ngắn;
+- tối đa 4 người cùng theo dõi trạng thái phòng;
+- ghi kết quả từng ván;
+- tự kiểm tra tổng điểm không bị lệch;
+- cập nhật dữ liệu realtime giữa các máy;
+- Undo ván gần nhất nếu nhập nhầm;
+- tổng hợp số dư từ toàn bộ lịch sử ván;
+- cấn nợ khi chốt sổ;
+- hỗ trợ tạo VietQR cho khoản cần thanh toán.
+
+**App chỉ là công cụ ghi chép.** Sòng Phẳng không giữ tiền, không thực hiện giao dịch ngân hàng và không xác nhận một khoản chuyển tiền đã hoàn tất.
+
+---
+
+## ✨ Four Seasons
+
+Phiên bản mới có 4 giao diện:
+
+- 🌸 **Xuân**
+- ☀️ **Hạ**
+- 🍂 **Thu**
+- ❄️ **Đông**
+
+App có thể tự chọn theme theo thời gian trên thiết bị, hoặc bạn có thể đổi thủ công trong phần giao diện. Lựa chọn thủ công được ghi nhớ trên trình duyệt.
+
+---
+
+## 🚀 Cách dùng nhanh
+
+### 1. Mở app và tạo hồ sơ
+
+Nhập tên hiển thị của bạn. Nếu muốn dùng VietQR khi chốt sổ, bạn có thể bổ sung thông tin nhận tiền trong hồ sơ.
+
+### 2. Một người tạo phòng
+
+Người tạo phòng trở thành **chủ phòng (host)** và được thêm vào danh sách người chơi ngay khi phòng được tạo.
+
+App sẽ tạo một **mã phòng 5 ký tự** để chia sẻ cho những người còn lại.
+
+### 3. Những người khác vào bằng mã phòng
+
+Mỗi người mở Sòng Phẳng trên máy hoặc phiên trình duyệt của mình, chọn **Vào bằng mã phòng** và nhập mã được host gửi.
+
+Khi hoạt động bình thường, người mới tham gia sẽ xuất hiện trên các máy khác **mà không cần reload trang**.
+
+### 4. Ghi kết quả từng ván
+
+Host nhập kết quả. App kiểm tra dữ liệu trước khi ghi vào sổ để tránh những round bị lệch tổng.
+
+### 5. Nếu nhập sai, dùng Undo
+
+Undo chỉ hoàn tác **ván gần nhất**. Các ván trước đó vẫn được giữ nguyên.
+
+### 6. Chốt sổ
+
+Khi kết thúc, app tính lại số dư từ lịch sử ván rồi rút gọn thành các khoản cần chuyển giữa những người chơi.
+
+Nếu thông tin ngân hàng của người nhận đã được nhập, app có thể tạo VietQR tương ứng.
+
+---
+
+## 🎮 Trò chơi đang hỗ trợ
 
 ### Tiến Lên
 
-Hiện tại app hỗ trợ phòng **đúng 4 người** với hai chế độ:
+Hiện tại Tiến Lên được thiết kế cho **đủ 4 người**.
+
+Có hai cách tính chính:
 
 1. **Nhất ăn Bét · Nhì ăn Ba**
-2. **Nhất ăn tất** — mỗi người còn lại trả `baseBet` cho người về Nhất.
+2. **Nhất ăn tất** — những người còn lại trả mức cược cơ bản cho người về Nhất.
 
-Tiền phạt được trả cho người về Nhất. Người về Nhất không thể tự phạt chính mình.
+Host xếp hạng người chơi sau mỗi ván và có thể thêm tiền phạt. App kiểm tra để tổng thay đổi của cả ván luôn bằng 0.
 
 ### Xì Dách
 
-Host là nhà cái. Host chỉ cần nhập số dư của những người chơi khác:
+Host đóng vai trò **nhà cái**.
+
+Với mỗi người chơi còn lại:
 
 - số dương: người chơi thắng nhà cái;
 - số âm: người chơi thua nhà cái;
-- số 0: hòa.
+- `0`: hòa.
 
-App tự tính số dư host bằng số đối của tổng còn lại.
+App tự tính phần thay đổi của nhà cái để tổng cả ván bằng 0.
 
-### Cấn nợ
+### Poker
 
-Khi tổng số dư bằng 0, app ghép người nợ lớn với người được nhận lớn để rút gọn luồng chuyển tiền. Đây là thuật toán greedy để tạo danh sách thanh toán gọn, **không tuyên bố nghiệm tối thiểu toán học trong mọi trường hợp**.
+Poker **chưa được hỗ trợ như một chế độ chơi hoàn chỉnh** trong bản release này.
 
-Nếu tổng số dư bị lệch, app **không tự bù**. Màn hình chốt sổ sẽ chặn VietQR và yêu cầu sửa dữ liệu trước.
+---
 
-## 🔐 Firebase & dữ liệu
+## 💰 Số dư được tính như thế nào?
 
-Stack:
+Sòng Phẳng không coi con số đang hiển thị trên một player là “nguồn sự thật” độc lập.
 
-- React 19 + TypeScript + Vite
-- Tailwind CSS + shadcn/Radix UI
-- Zustand persist
-- Firebase Anonymous Auth + Firestore realtime
-- VietQR image URL
-- Vercel
+Mỗi ván được ghi vào **lịch sử giao dịch (ledger)**. Số dư hiện tại được dựng lại bằng cách cộng toàn bộ thay đổi của người chơi qua các ván.
 
-Firebase web config đã được chuyển khỏi source code sang biến môi trường `VITE_FIREBASE_*` để tách cấu hình theo môi trường. Lưu ý: biến `VITE_*` vẫn được Vite đóng gói vào client, nên đây **không phải kho bí mật**.
+Ví dụ:
 
-> Firebase web API key không phải là lớp authorization. **Firestore Security Rules mới là ranh giới quyền truy cập quan trọng.** Repo có file `firestore.rules` để deploy cùng project Firebase; hãy giữ API key giới hạn cho đúng các API Firebase cần dùng.
+```text
+Ván 1
+An   +50
+Bình -50
 
-Thông tin ngân hàng được lưu trong player document của phòng để các **thành viên cùng phòng** có thể tạo VietQR lúc chốt sổ. Không nên dùng app cho dữ liệu tài chính nhạy cảm ngoài mục đích này.
+Ván 2
+An   -20
+Bình +20
 
-### Biến môi trường
-
-Copy file mẫu:
-
-```bash
-cp .env.example .env.local
+Số dư hiện tại
+An   +30
+Bình -30
 ```
 
-Điền các giá trị Firebase project:
+Nhờ vậy, lịch sử ván có thể được dùng để đối chiếu lại số dư khi cần.
+
+### Đơn vị hiển thị
+
+App dùng **nghìn đồng** làm đơn vị nhập điểm:
+
+```text
+10  = 10.000 VND
+50  = 50.000 VND
+100 = 100.000 VND
+```
+
+---
+
+## 🧾 Cấn nợ và VietQR
+
+Khi tổng số dư của phòng bằng 0, app rút gọn các khoản nợ thành danh sách chuyển tiền trực tiếp giữa người trả và người nhận.
+
+Ví dụ thay vì nhiều khoản chuyển vòng qua nhau, app cố gắng tạo một danh sách thanh toán ngắn và dễ thực hiện hơn.
+
+Nếu ledger bị lệch tổng, app **không tự bù số tiền bị thiếu**. Việc chốt sổ/VietQR sẽ bị chặn để người chơi kiểm tra lại dữ liệu trước.
+
+> VietQR chỉ giúp tạo thông tin thanh toán. App không biết một giao dịch ngân hàng đã thực sự được chuyển hay chưa.
+
+---
+
+## 🔄 Realtime, reload và trạng thái online
+
+Sòng Phẳng dùng Firebase để đồng bộ phòng giữa các thiết bị.
+
+Trong một phiên chơi bình thường:
+
+- người mới vào phòng sẽ xuất hiện realtime;
+- ván mới sẽ cập nhật trên các máy đang mở;
+- Undo sẽ cập nhật cho các thành viên khác;
+- khi reload trang trên cùng trình duyệt, app cố gắng khôi phục lại phòng đang tham gia;
+- trạng thái online được cập nhật bằng heartbeat.
+
+Trạng thái **online/offline chỉ mang tính tiện ích**, không phải bằng chứng tuyệt đối rằng một người vẫn đang nhìn vào màn hình.
+
+---
+
+## 🧪 Bản test công khai — mình cần bạn thử gì?
+
+Nếu bạn muốn hỗ trợ test, một lượt test có ích nhất là dùng **2 trình duyệt/2 thiết bị độc lập** và thử lần lượt:
+
+1. Máy A tạo phòng.
+2. Máy B vào bằng mã phòng.
+3. Kiểm tra A thấy B xuất hiện realtime.
+4. Nhập một ván hợp lệ và xem cả hai máy có cập nhật giống nhau không.
+5. Thử nhập dữ liệu sai/lệch tổng và kiểm tra app có từ chối không.
+6. Reload cả A và B, kiểm tra cả hai có trở lại đúng phòng không.
+7. Tạo thêm vài ván rồi Undo ván gần nhất.
+8. Kiểm tra số dư sau Undo.
+9. Chốt sổ và kiểm tra các khoản cần chuyển.
+10. Nếu có dùng VietQR, kiểm tra tên người nhận, số tiền và thông tin thanh toán.
+
+### Khi gặp bug
+
+Nếu có thể, hãy gửi kèm:
+
+- thiết bị và trình duyệt đang dùng;
+- thao tác ngay trước khi lỗi xảy ra;
+- bạn mong đợi điều gì;
+- app thực tế đã làm gì;
+- ảnh chụp màn hình;
+- ảnh Console/Network nếu bạn biết mở DevTools.
+
+Nếu báo lỗi liên quan đến phòng, mã phòng cũng hữu ích để mô tả tình huống — nhưng **đừng đăng công khai thông tin ngân hàng hoặc dữ liệu cá nhân nhạy cảm**.
+
+---
+
+## 🔐 Dữ liệu và quyền riêng tư
+
+Sòng Phẳng hiện dùng **Firebase Anonymous Authentication**. Điều này cho phép app nhận biết một phiên người dùng mà không yêu cầu tạo tài khoản bằng email/mật khẩu.
+
+Một số điều nên biết:
+
+- dữ liệu phòng được lưu trên Firestore;
+- thành viên trong cùng phòng cần đọc dữ liệu cần thiết để hiển thị bảng điểm và chốt sổ;
+- nếu bạn nhập thông tin ngân hàng để nhận VietQR, thông tin đó được dùng trong ngữ cảnh phòng để tạo khoản thanh toán;
+- không nên nhập dữ liệu tài chính nhạy cảm ngoài những thông tin tối thiểu cần cho việc nhận chuyển khoản;
+- nếu bạn xóa toàn bộ dữ liệu site/browser hoặc làm mất Firebase anonymous identity, app có thể không nhận ra bạn là cùng một người chơi cũ.
+
+**Firebase web API key không phải mật khẩu của database.** Quyền đọc/ghi dữ liệu được kiểm soát bằng Firestore Security Rules.
+
+---
+
+## 📱 Trình duyệt khuyến nghị
+
+Nên mở bằng trình duyệt đầy đủ như:
+
+- Chrome
+- Edge
+- Safari
+- Firefox
+
+Các trình duyệt nhúng bên trong Zalo, Facebook, Messenger, Instagram, WeChat hoặc LINE có thể hạn chế một số API của trình duyệt. Nếu app phát hiện môi trường như vậy, hãy chọn **Mở bằng trình duyệt** nếu có thể.
+
+App cũng sử dụng Screen Wake Lock khi trình duyệt hỗ trợ để hạn chế việc màn hình tự tắt trong lúc đang theo dõi phòng.
+
+---
+
+## ⚠️ Giới hạn hiện tại
+
+- Tối đa **4 người/phòng**.
+- Tiến Lên hiện yêu cầu **đúng 4 người**.
+- Poker chưa mở như một game mode hoàn chỉnh.
+- Anonymous identity phụ thuộc vào dữ liệu trình duyệt; xóa toàn bộ site data có thể làm mất khả năng nhận diện phiên cũ.
+- VietQR không xác nhận giao dịch đã thanh toán.
+- App đang trong giai đoạn test thực tế, vì vậy vẫn có thể còn edge case ở realtime, reconnect, trình duyệt di động hoặc Firestore Rules.
+
+---
+
+## 🛠️ Dành cho người muốn chạy source
+
+Phần dưới đây dành cho developer/contributor. Người chỉ muốn dùng thử app có thể bỏ qua.
+
+### Stack
+
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+- shadcn/Radix UI
+- Zustand
+- Firebase Anonymous Auth
+- Cloud Firestore realtime
+- Vercel
+
+### Cài dependencies
+
+```bash
+npm ci
+```
+
+### Firebase environment variables
+
+Tạo `.env.local` từ `.env.example` và điền cấu hình Firebase Web App:
 
 ```env
 VITE_FIREBASE_API_KEY=
@@ -81,82 +275,48 @@ VITE_FIREBASE_PROJECT_ID=
 VITE_FIREBASE_STORAGE_BUCKET=
 VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
-VITE_FIREBASE_MEASUREMENT_ID=
 ```
 
-`.env.local` đã nằm trong `.gitignore` và **không được commit**.
+`.env.local` **không được commit**.
 
-### Firebase Console
+Trong Firebase Console cần:
 
-1. Bật **Authentication → Anonymous**.
-2. Tạo Firestore database.
-3. Deploy rules trong repo:
+1. bật **Authentication → Anonymous**;
+2. tạo Firestore database;
+3. publish `firestore.rules`;
+4. thêm production domain vào **Authentication → Settings → Authorized domains** nếu cần dùng các OAuth flow sau này.
+
+Firebase CLI không bắt buộc nếu rules được copy/publish trực tiếp trong Firebase Console.
+
+### Chạy local
 
 ```bash
-firebase deploy --only firestore:rules
+npm run dev
 ```
 
-Nếu không dùng Firebase CLI, copy nội dung `firestore.rules` vào Firestore Rules trên Firebase Console và publish.
-
-> **Migration:** phòng đang mở từ bản cũ nên được tạo lại. Bản Four Seasons thêm `metadata.playerCount` và dùng transaction ledger làm nguồn số dư.
-
-## 🧪 Kiểm tra
-
-```bash
-npm ci
-npm run test
-npm run lint
-npm run build
-```
-
-Chạy toàn bộ test/lint/build:
-
-```bash
-npm run check
-```
-
-Release gate khuyến nghị (thêm audit dependency production):
+### Release gate
 
 ```bash
 npm run verify
 ```
 
-`npm run verify` phải xanh trước khi deploy. Nếu bạn quản lý Firestore Rules trực tiếp bằng Firebase Console thì **không cần cài Firebase CLI**; chỉ cần bảo đảm file `firestore.rules` trong repo luôn đồng bộ với rules đã Publish trên Console.
+`npm run verify` chạy regression tests, lint, production build và audit production dependencies. Không nên deploy một thay đổi nếu gate này chưa xanh.
 
-Regression tests hiện kiểm tra các invariant chính:
+### Deploy
 
-- Tiến Lên luôn zero-sum;
-- phạt vẫn bảo toàn tiền;
-- rank trùng bị từ chối;
-- Xì Dách tự cân bằng nhà cái;
-- cấn nợ từ chối ledger bị lệch;
-- VietQR chuẩn hóa số tiền;
-- ledger tái dựng số dư thay vì tin `currentScore` denormalized;
-- auto theme chọn đúng mùa và manual override hoạt động.
+Project hiện phù hợp với Vercel/Vite:
 
-## 🚀 Deploy Vercel
+```text
+Build command:     npm run build
+Output directory:  dist
+```
 
-1. Import repo vào Vercel.
-2. Framework Preset: **Vite**.
-3. Build command: `npm run build`.
-4. Output directory: `dist`.
-5. Khai báo toàn bộ `VITE_FIREBASE_*` trong **Project → Settings → Environment Variables**.
-6. Deploy.
-7. Firebase rules phải được publish riêng bằng Firebase Console/CLI; Vercel không tự deploy Firestore Rules.
-
-## 📱 Hành vi trình duyệt
-
-- Dashboard yêu cầu Screen Wake Lock khi trình duyệt hỗ trợ.
-- App phát hiện các in-app browser phổ biến (Zalo/Facebook/Messenger/Instagram/WeChat/LINE) và khuyến nghị mở bằng Safari/Chrome/Edge.
-- Presence dùng heartbeat; trạng thái online là tín hiệu tiện ích, không phải chứng cứ tuyệt đối về kết nối.
-
-## Giới hạn có chủ ý
-
-- Tối đa 4 người/phòng.
-- Poker vẫn được giữ trong type để tương thích dữ liệu cũ nhưng **không cho tạo phòng Poker mới**.
-- Đơn vị tính điểm là **nghìn đồng nguyên** (`10` = `10.000 VND`) để Firestore Rules có thể xác minh zero-sum deterministically.
-- App không có backend tin cậy để khôi phục danh tính sau khi người dùng xóa toàn bộ Firebase/local browser state. Tính năng PIN cũ đã được bỏ thay vì duy trì một cơ chế khôi phục yếu và gây cảm giác an toàn giả.
+Các biến `VITE_FIREBASE_*` cần được khai báo trong Vercel Environment Variables cho môi trường production. Firestore Rules được publish riêng qua Firebase Console hoặc Firebase CLI; Vercel không tự deploy rules.
 
 ---
+
+## ❤️ Cảm ơn bạn đã test
+
+Một bug report rõ ràng có giá trị hơn rất nhiều so với câu “app bị lỗi”. Nếu bạn dành vài phút chơi thử bằng hai thiết bị, reload giữa chừng, nhập sai một ván hoặc thử Undo/chốt sổ, feedback đó sẽ giúp Sòng Phẳng ổn định nhanh hơn.
 
 **Sòng Phẳng — chơi vui, ghi rõ, chốt gọn.**
