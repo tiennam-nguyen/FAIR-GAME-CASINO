@@ -1,0 +1,234 @@
+/* Sòng Phẳng — four-season visual system */
+
+:root,
+:root[data-season='spring'] {
+  --season-900: #831843;
+  --season-700: #be185d;
+  --season-600: #db2777;
+  --season-500: #ec4899;
+  --season-accent: #84cc16;
+  --season-soft: #fdf2f8;
+  --season-soft-2: #f7fee7;
+  --season-border: #fbcfe8;
+  --season-ink: #4a1531;
+}
+
+:root[data-season='summer'] {
+  --season-900: #134e4a;
+  --season-700: #0f766e;
+  --season-600: #0d9488;
+  --season-500: #14b8a6;
+  --season-accent: #f59e0b;
+  --season-soft: #f0fdfa;
+  --season-soft-2: #fffbeb;
+  --season-border: #99f6e4;
+  --season-ink: #123f3c;
+}
+
+:root[data-season='autumn'] {
+  --season-900: #78350f;
+  --season-700: #a16207;
+  --season-600: #ca8a04;
+  --season-500: #eab308;
+  --season-accent: #c2410c;
+  --season-soft: #fffbeb;
+  --season-soft-2: #fff7ed;
+  --season-border: #fde68a;
+  --season-ink: #5f350d;
+}
+
+:root[data-season='winter'] {
+  --season-900: #1e3a8a;
+  --season-700: #1d4ed8;
+  --season-600: #2563eb;
+  --season-500: #3b82f6;
+  --season-accent: #7c3aed;
+  --season-soft: #eff6ff;
+  --season-soft-2: #f5f3ff;
+  --season-border: #bfdbfe;
+  --season-ink: #172554;
+}
+
+html {
+  background: #f8fafc;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--season-500) 30%, transparent);
+  outline-offset: 2px;
+}
+
+.season-gradient {
+  background:
+    radial-gradient(circle at 15% 10%, rgb(255 255 255 / 0.18), transparent 26rem),
+    linear-gradient(135deg, var(--season-900) 0%, var(--season-600) 58%, var(--season-accent) 145%);
+}
+
+.season-page {
+  background:
+    radial-gradient(circle at 10% 5%, color-mix(in srgb, var(--season-500) 10%, transparent), transparent 22rem),
+    radial-gradient(circle at 95% 35%, color-mix(in srgb, var(--season-accent) 10%, transparent), transparent 20rem),
+    #f8fafc;
+}
+
+.season-button {
+  color: white;
+  background: linear-gradient(135deg, var(--season-700), var(--season-500));
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--season-700) 24%, transparent);
+}
+
+.season-button:hover {
+  filter: brightness(0.96);
+}
+
+.season-solid {
+  background-color: var(--season-600) !important;
+}
+
+.season-text {
+  color: var(--season-700) !important;
+}
+
+.season-border {
+  border-color: var(--season-border) !important;
+}
+
+.season-soft {
+  background: linear-gradient(135deg, var(--season-soft), var(--season-soft-2)) !important;
+}
+
+.season-ring {
+  box-shadow: 0 0 0 1px var(--season-border), 0 18px 40px rgb(15 23 42 / 0.08);
+}
+
+.season-chip {
+  color: var(--season-900);
+  border: 1px solid color-mix(in srgb, var(--season-500) 24%, white);
+  background: color-mix(in srgb, var(--season-soft) 82%, white);
+}
+
+.season-orb {
+  background: color-mix(in srgb, var(--season-accent) 42%, transparent);
+  filter: blur(36px);
+}
+
+[data-season] .text-red-600,
+[data-season] .text-red-500,
+[data-season] .text-red-700 {
+  color: var(--season-700) !important;
+}
+
+[data-season] .bg-red-500,
+[data-season] .bg-red-600 {
+  background-color: var(--season-600) !important;
+}
+
+[data-season] .bg-red-50,
+[data-season] .bg-red-100 {
+  background-color: var(--season-soft) !important;
+}
+
+[data-season] .border-red-100,
+[data-season] .border-red-200,
+[data-season] .border-red-500 {
+  border-color: var(--season-border) !important;
+}
+
+[data-season] .from-red-600,
+[data-season] .from-red-500 {
+  --tw-gradient-from: var(--season-700) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: transparent var(--tw-gradient-to-position) !important;
+}
+
+[data-season] .via-red-500 {
+  --tw-gradient-to: transparent var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--season-500) var(--tw-gradient-via-position), var(--tw-gradient-to) !important;
+}
+
+[data-season] .to-red-500,
+[data-season] .to-red-600 {
+  --tw-gradient-to: var(--season-500) var(--tw-gradient-to-position) !important;
+}
+
+[data-season] .to-yellow-500 {
+  --tw-gradient-to: var(--season-accent) var(--tw-gradient-to-position) !important;
+}
+
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--season-600) 70%, #94a3b8);
+  border-radius: 999px;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 320ms ease-out both;
+}
+
+.glass {
+  background: rgb(255 255 255 / 0.9);
+  border: 1px solid rgb(255 255 255 / 0.6);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

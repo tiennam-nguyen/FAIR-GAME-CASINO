@@ -1,0 +1,161 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function roomPath(roomId) {
+      return /databases/$(database)/documents/rooms/$(roomId);
+    }
+
+    function playerPath(roomId, playerId) {
+      return /databases/$(database)/documents/rooms/$(roomId)/players/$(playerId);
+    }
+
+    function isHost(roomId) {
+      return signedIn() && get(roomPath(roomId)).data.hostId == request.auth.uid;
+    }
+
+    function isMember(roomId) {
+      return signedIn() && exists(playerPath(roomId, request.auth.uid));
+    }
+
+    function isAtomicJoin(roomId) {
+      return signedIn() &&
+        resource.data.status == 'active' &&
+        request.resource.data.hostId == resource.data.hostId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.gameConfig == resource.data.gameConfig &&
+        request.resource.data.status == resource.data.status &&
+        request.resource.data.metadata.totalRounds == resource.data.metadata.totalRounds &&
+        request.resource.data.metadata.playerCount == resource.data.metadata.playerCount + 1 &&
+        request.resource.data.metadata.playerCount <= 4 &&
+        getAfter(playerPath(roomId, request.auth.uid)).data.uid == request.auth.uid &&
+        !exists(playerPath(roomId, request.auth.uid));
+    }
+
+    function isHostRoomUpdate(roomId) {
+      return isHost(roomId) &&
+        request.resource.data.hostId == resource.data.hostId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.gameConfig == resource.data.gameConfig &&
+        request.resource.data.metadata.playerCount == resource.data.metadata.playerCount &&
+        request.resource.data.metadata.totalRounds >= resource.data.metadata.totalRounds - 1 &&
+        request.resource.data.metadata.totalRounds <= resource.data.metadata.totalRounds + 1 &&
+        (
+          request.resource.data.metadata.totalRounds == resource.data.metadata.totalRounds ||
+          (
+            request.resource.data.status == resource.data.status &&
+            resource.data.status == 'active'
+          )
+        );
+    }
+
+    function validScoreItem(roomId, item) {
+      return item is map &&
+        item.keys().hasOnly(['playerId', 'change', 'note']) &&
+        item.keys().hasAll(['playerId', 'change']) &&
+        item.playerId is string &&
+        item.change is int &&
+        exists(playerPath(roomId, item.playerId));
+    }
+
+    function validZeroSum(roomId, scores) {
+      return scores is list &&
+        scores.size() >= 2 &&
+        scores.size() <= 4 &&
+        (
+          (scores.size() == 2 &&
+            validScoreItem(roomId, scores[0]) && validScoreItem(roomId, scores[1]) &&
+            scores[0].playerId != scores[1].playerId &&
+            scores[0].change + scores[1].change == 0) ||
+          (scores.size() == 3 &&
+            validScoreItem(roomId, scores[0]) && validScoreItem(roomId, scores[1]) &&
+            validScoreItem(roomId, scores[2]) &&
+            scores[0].playerId != scores[1].playerId &&
+            scores[0].playerId != scores[2].playerId &&
+            scores[1].playerId != scores[2].playerId &&
+            scores[0].change + scores[1].change + scores[2].change == 0) ||
+          (scores.size() == 4 &&
+            validScoreItem(roomId, scores[0]) && validScoreItem(roomId, scores[1]) &&
+            validScoreItem(roomId, scores[2]) && validScoreItem(roomId, scores[3]) &&
+            scores[0].playerId != scores[1].playerId &&
+            scores[0].playerId != scores[2].playerId &&
+            scores[0].playerId != scores[3].playerId &&
+            scores[1].playerId != scores[2].playerId &&
+            scores[1].playerId != scores[3].playerId &&
+            scores[2].playerId != scores[3].playerId &&
+            scores[0].change + scores[1].change + scores[2].change + scores[3].change == 0)
+        );
+    }
+
+    match /rooms/{roomId} {
+      // A signed-in user needs room metadata to join by code.
+      allow read: if signedIn();
+
+      allow create: if signedIn() &&
+        request.resource.data.hostId == request.auth.uid &&
+        request.resource.data.status == 'active' &&
+        request.resource.data.metadata.totalRounds == 0 &&
+        request.resource.data.metadata.playerCount == 1;
+
+      allow update: if isHostRoomUpdate(roomId) || isAtomicJoin(roomId);
+
+      // Closing is status-only; settlement history remains recoverable.
+      allow delete: if false;
+
+      match /players/{playerId} {
+        allow read: if isMember(roomId) || isHost(roomId);
+
+        // Player creation must be coupled to room creation or an atomic playerCount increment.
+        allow create: if signedIn() &&
+          request.auth.uid == playerId &&
+          request.resource.data.uid == playerId &&
+          request.resource.data.currentScore == 0 &&
+          getAfter(roomPath(roomId)).data.status == 'active' &&
+          (
+            (
+              !exists(roomPath(roomId)) &&
+              getAfter(roomPath(roomId)).data.hostId == request.auth.uid &&
+              getAfter(roomPath(roomId)).data.metadata.playerCount == 1
+            ) ||
+            (
+              exists(roomPath(roomId)) &&
+              getAfter(roomPath(roomId)).data.metadata.playerCount ==
+                get(roomPath(roomId)).data.metadata.playerCount + 1 &&
+              getAfter(roomPath(roomId)).data.metadata.playerCount <= 4
+            )
+          );
+
+        // Balances are derived from the immutable ledger, never trusted from player documents.
+        allow update: if signedIn() &&
+          request.auth.uid == playerId &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['displayName', 'bankInfo', 'isOnline', 'lastActive']);
+
+        allow delete: if false;
+      }
+
+      match /transactions/{transactionId} {
+        allow read: if isMember(roomId) || isHost(roomId);
+
+        allow create: if isHost(roomId) &&
+          get(roomPath(roomId)).data.status == 'active' &&
+          request.resource.data.createdBy == request.auth.uid &&
+          request.resource.data.roundNumber is int &&
+          request.resource.data.roundNumber == get(roomPath(roomId)).data.metadata.totalRounds + 1 &&
+          getAfter(roomPath(roomId)).data.metadata.totalRounds == request.resource.data.roundNumber &&
+          validZeroSum(roomId, request.resource.data.scores);
+
+        allow update: if false;
+
+        // Undo is only the latest ledger entry and must atomically rewind the round counter.
+        allow delete: if isHost(roomId) &&
+          resource.data.roundNumber == get(roomPath(roomId)).data.metadata.totalRounds &&
+          getAfter(roomPath(roomId)).data.metadata.totalRounds == resource.data.roundNumber - 1;
+      }
+    }
+  }
+}
