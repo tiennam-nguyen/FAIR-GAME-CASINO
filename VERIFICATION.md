@@ -1,66 +1,91 @@
-# Verification Report
+# Verification Report — v2
 
-## [RAN] Regression logic
+## Status
 
-Command:
+**AMBER in the delivery sandbox, with the known v1 build/lint reproduction fixed in source.** The remaining blocker is environmental: this sandbox cannot resolve `registry.npmjs.org`, so it cannot perform a clean dependency install and therefore cannot honestly run the repository's ESLint/Vite executables.
+
+The release gate on a normal machine is now one command:
 
 ```bash
-node --experimental-strip-types --test tests/*.test.mjs
+npm run verify
 ```
 
-Result in the TECTON delivery environment: **10 tests passed, 0 failed**.
+That command runs regression tests, ESLint, TypeScript + Vite production build, and a production-dependency npm audit.
 
-Covered invariants:
-- Tiến Lên zero-sum in both supported modes.
-- Penalties preserve total money and winner self-penalty is ignored.
-- Duplicate ranks are rejected.
-- Xì Dách derives dealer balance automatically.
-- Debt simplification preserves a balanced ledger and rejects imbalance.
-- VietQR amount normalization.
-- Ledger, not denormalized player score, determines balances.
-- Automatic seasons and manual override.
+## [RAN] v1 reproduction supplied by the user
 
-## [RAN] Static integrity
+On a clean Windows install of v1:
 
-- 76 TS/TSX files parsed/transpiled with the installed TypeScript compiler: **0 syntax diagnostics**.
-- Internal relative and `@/` imports checked: **0 missing files**.
-- `package.json` and the root dependency graph in `package-lock.json` checked: **consistent**.
-- Unused `kimi-plugin-inspect-react` removed from Vite config, package manifest and lockfile.
-- Source scan found no raw Firebase web config literal/key pattern.
-- Final package excludes `.env.local`, `node_modules`, stale `dist`, logs and caches.
+- 10/10 regression tests passed.
+- ESLint failed with 10 findings: one effect/state issue, one render-purity issue, seven shadcn Fast Refresh co-export findings, and one banned `@ts-ignore`.
+- `tsc -b` failed because `Firestore` was referenced as a type without importing it.
 
-## [READ + independently checked] Firestore boundary
+Those outputs define the v2 regression frontier; no other build error was observed before TypeScript stopped.
 
-`firestore.rules` now guards:
-- authenticated room reads;
-- atomic join + max 4 players;
-- self-only profile/presence edits;
-- host-only transaction creation;
-- integer, 2–4 player, unique-player, zero-sum score arrays;
-- round counter coupled to transaction create/delete using `getAfter()`;
-- undo limited to the latest ledger entry;
-- room/player destructive deletes disabled.
+## [READ + FIXED] v2 build/lint frontier
 
-## [BLOCKED by environment] Full build/browser verification
+- `src/lib/firebase.ts` now imports `type Firestore` from `firebase/firestore`.
+- `InAppBrowserOverlay.tsx` uses a lazy `useState` initializer instead of synchronously setting state in an effect.
+- `SidebarMenuSkeleton` uses a deterministic skeleton width instead of `Math.random()` during render.
+- `useWakeLock.ts` uses a typed Wake Lock capability seam; the `@ts-ignore` is gone.
+- `react-refresh/only-export-components` is disabled **only** under `src/components/ui/**`, where shadcn-style modules intentionally co-export variants/hooks. The rule remains active for application components.
 
-The execution sandbox cannot resolve `registry.npmjs.org` (`getent` fails; `curl` DNS resolution times out), so a clean dependency installation cannot complete. Therefore **ESLint, `tsc -b`, Vite production build, and browser smoke tests are not claimed as run**.
+## [RAN] regression and static checks on v2
 
-Run this immediately after extracting the ZIP in an environment with npm network access:
+Commands/checks executed in the delivery environment:
 
 ```bash
-cp .env.example .env.local
-# fill VITE_FIREBASE_* values
+npm run test
+node --check eslint.config.js
+npm ci --dry-run --ignore-scripts --offline
+```
+
+Results:
+
+- **10 tests passed, 0 failed.**
+- ESLint config parses as valid JavaScript.
+- npm accepts the `package.json` / `package-lock.json` dependency tree in a dry-run: **607 packages planned, exit 0**.
+- A TypeScript transpile sweep over the project TS/TSX source completed with **0 syntax diagnostics**.
+- Targeted regression scan confirms the four known lint/build trigger patterns from v1 are absent.
+
+## [READ + PATCHED] production dependency findings from the user's audit
+
+The v1 `npm audit --omit=dev` report named six production findings. v2 removes the unused direct `uuid` dependency and moves the affected transitive lock entries to patched lines compatible with their existing parent ranges:
+
+- `@grpc/grpc-js` → `1.9.16`
+- `@protobufjs/utf8` → `1.1.2`
+- `protobufjs` → `7.6.5`
+- `lodash` → `4.18.1`
+- `websocket-driver` → `0.7.5`
+- direct `uuid` → removed
+
+This is **not** a claim that the npm advisory database will remain at zero: advisories change over time. `npm run audit:prod` is therefore part of the release gate.
+
+## [BLOCKED in this sandbox] clean full gate
+
+DNS resolution for `registry.npmjs.org` times out here, and the npm cache does not contain the dependency tarballs. Because `node_modules` cannot be installed, the following are deliberately **not** claimed as run in this environment:
+
+- repository ESLint executable;
+- `tsc -b` with the exact locked TypeScript package;
+- Vite production bundle;
+- browser smoke test of the v2 bundle;
+- live Firebase end-to-end test against your new project.
+
+### Handover gate
+
+On your Windows machine, from a fresh extraction:
+
+```powershell
 npm ci
-npm run check
+npm run verify
+```
+
+If that is green, then add your `.env.local` and run:
+
+```powershell
 npm run dev
 ```
 
-Then publish `firestore.rules` to the matching Firebase project and manually smoke-test:
-1. create a Tiến Lên room as host;
-2. join until 4 players;
-3. score a round and verify zero-sum/ranking;
-4. undo latest round;
-5. run Xì Dách and verify dealer auto-balance;
-6. settle and inspect VietQR data;
-7. switch all four seasons on mobile width;
-8. close the room and confirm history remains readable.
+Smoke-test with two independent browser sessions: create → join → score → reject invalid score → undo → refresh/rejoin → settle → host/non-host permission checks.
+
+Do not deploy if `npm run verify` is red; send the exact output back and that becomes the next frontier.

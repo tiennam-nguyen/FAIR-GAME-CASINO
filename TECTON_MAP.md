@@ -27,15 +27,17 @@ Nâng cấp web app ghi điểm nhóm bạn thành bản Four Seasons mobile-fir
 5. Undo: only latest transaction → atomically delete ledger entry + decrement round counter; balances recompute from ledger.
 6. Close: `settling` / `closed` status only; history and player docs are retained for reconciliation.
 
-## L3 — FINAL FRONTIER
-- [RAN] 10 pure regression tests pass.
-- [RAN] 76 TS/TSX files parse/transpile with TypeScript, 0 syntax diagnostics.
-- [RAN] Internal alias/relative imports resolve; package.json and package-lock root dependency graphs match.
-- [RAN] Source scan contains no raw Firebase config literal/key pattern; insecure PIN recovery code is removed.
-- [UNKNOWN in this runner] Full dependency install, ESLint, Vite production build, browser rendering, and Firebase Rules emulator execution because npm registry DNS is unavailable in the sandbox.
+## L3 — V2 FRONTIER
+- [RAN:user handover] v1 clean install: 10/10 tests green; lint 10 errors; build stopped on missing `Firestore` type import.
+- [READ+FIXED] All four root mechanisms from that reproduction are addressed in source/config.
+- [RAN] v2: 10/10 pure regression tests pass; ESLint config parses; dependency lock dry-run resolves 607 packages; TS/TSX transpile sweep has 0 syntax diagnostics.
+- [READ+PATCHED] The six production packages named by the user's audit were removed or moved to patched compatible lock versions.
+- [UNKNOWN in this runner] Exact `npm run verify` and browser/Firebase E2E because npm registry DNS is unavailable; this remains the handover gate.
 
 ## Load-bearing decisions
 - Transaction ledger is the money source of truth; `Player.currentScore` is legacy compatibility only.
 - Close/leave are non-destructive; no score/history deletion for normal UX actions.
 - PIN reclaim was removed rather than preserving weak local identity recovery.
 - Firebase web config uses environment variables for environment separation, not as a false secret vault.
+- Lint exceptions stay scoped to shadcn UI primitives; application components retain the Fast Refresh rule.
+- Dependency security is a repeatable gate (`npm run audit:prod`), not a one-time claim.

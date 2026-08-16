@@ -4,6 +4,12 @@ interface WakeLockSentinel {
   release: () => Promise<void>;
 }
 
+type NavigatorWithWakeLock = Navigator & {
+  wakeLock?: {
+    request: (type: 'screen') => Promise<WakeLockSentinel>;
+  };
+};
+
 // Screen Wake Lock hook to keep screen awake during gameplay
 export function useWakeLock(enabled: boolean = true) {
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -13,9 +19,9 @@ export function useWakeLock(enabled: boolean = true) {
 
     const requestWakeLock = async () => {
       try {
-        if ('wakeLock' in navigator) {
-          // @ts-ignore - wakeLock API might not be in all TypeScript definitions
-          wakeLockRef.current = await navigator.wakeLock.request('screen');
+        const wakeLock = (navigator as NavigatorWithWakeLock).wakeLock;
+        if (wakeLock) {
+          wakeLockRef.current = await wakeLock.request('screen');
         }
       } catch (err) {
         console.warn('Wake lock request failed:', err);

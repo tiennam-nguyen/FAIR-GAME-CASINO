@@ -109,11 +109,19 @@ npm run lint
 npm run build
 ```
 
-Hoặc chạy toàn bộ:
+Chạy toàn bộ test/lint/build:
 
 ```bash
 npm run check
 ```
+
+Release gate khuyến nghị (thêm audit dependency production):
+
+```bash
+npm run verify
+```
+
+`npm run verify` phải xanh trước khi deploy. Nếu bạn quản lý Firestore Rules trực tiếp bằng Firebase Console thì **không cần cài Firebase CLI**; chỉ cần bảo đảm file `firestore.rules` trong repo luôn đồng bộ với rules đã Publish trên Console.
 
 Regression tests hiện kiểm tra các invariant chính:
 

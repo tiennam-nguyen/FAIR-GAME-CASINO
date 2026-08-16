@@ -1,15 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { isInAppBrowser } from '@/types';
 import { AlertTriangle, Copy, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 export default function InAppBrowserOverlay() {
-  const [showOverlay, setShowOverlay] = useState(false);
-
-  useEffect(() => {
-    setShowOverlay(isInAppBrowser());
-  }, []);
+  const [showOverlay, setShowOverlay] = useState(isInAppBrowser);
 
   if (!showOverlay) return null;
 

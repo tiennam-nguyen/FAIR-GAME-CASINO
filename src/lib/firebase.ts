@@ -21,6 +21,7 @@ import {
   getDocs,
   enableIndexedDbPersistence,
   runTransaction,
+  type Firestore,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 
