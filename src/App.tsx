@@ -13,6 +13,11 @@ import ScoreModal from '@/components/modals/ScoreModal';
 import InAppBrowserOverlay from '@/components/InAppBrowserOverlay';
 import { getPlayer, getRoom, onAuthChange } from '@/lib/firebase';
 import { resolveSeason } from '@/lib/season';
+import {
+  readRoomLocation,
+  writeRoomIdToLocation,
+  type RoomLocation,
+} from '@/lib/roomUrl';
 import './App.css';
 
 function App() {
@@ -50,6 +55,35 @@ function App() {
   const [isRestoringRoom, setIsRestoringRoom] = useState(
     Boolean(activeRoomId && !currentRoomId)
   );
+  const [roomLocation, setRoomLocation] = useState<RoomLocation>(() =>
+    typeof window === 'undefined' ? { kind: 'absent' } : readRoomLocation(window.location.search)
+  );
+  const [pendingJoinRoomId, setPendingJoinRoomId] = useState<string | null>(null);
+
+  const requestedRoomId =
+    roomLocation.kind === 'valid'
+      ? roomLocation.roomId
+      : roomLocation.kind === 'absent'
+        ? activeRoomId
+        : null;
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const nextLocation = readRoomLocation(window.location.search);
+      setRoomLocation(nextLocation);
+      if (nextLocation.kind === 'absent' && useStore.getState().currentRoom) {
+        resetRoomState();
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [resetRoomState]);
+
+  useEffect(() => {
+    if (roomLocation.kind !== 'invalid') return;
+    setCurrentView('welcome');
+    setError('Mã phòng trên đường dẫn không hợp lệ.');
+  }, [roomLocation, setCurrentView, setError]);
 
   useEffect(() => {
     document.documentElement.dataset.season = resolveSeason(seasonPreference);
@@ -64,13 +98,13 @@ function App() {
 
   useEffect(() => {
     // Không có phòng cần khôi phục.
-    if (!activeRoomId) {
+    if (!requestedRoomId) {
       setIsRestoringRoom(false);
       return;
     }
 
     // Phòng đã có trong memory, ví dụ vừa Create/Join xong.
-    if (currentRoomId === activeRoomId) {
+    if (currentRoomId === requestedRoomId) {
       setIsRestoringRoom(false);
       return;
     }
@@ -101,18 +135,34 @@ function App() {
       void (async () => {
         try {
           const [room, player] = await Promise.all([
-            getRoom(activeRoomId),
-            getPlayer(activeRoomId, user.uid),
+            getRoom(requestedRoomId),
+            getPlayer(requestedRoomId, user.uid),
           ]);
 
           if (cancelled) return;
 
           // Phòng đã mất hoặc UID hiện tại không còn membership.
-          if (!room || !player) {
-            resetRoomState();
-            setError(
-              'Không thể khôi phục phòng trước đó. Vui lòng vào lại bằng mã phòng.'
+          if (!room) {
+            setCurrentView('welcome');
+            setError('Không tìm thấy phòng trên đường dẫn.');
+            return;
+          }
+
+          if (!player) {
+            setCurrentView('welcome');
+            setPendingJoinRoomId(room.id);
+            const profile = useStore.getState().userProfile;
+            const hasCompleteProfile = Boolean(
+              profile?.displayName.trim() &&
+              profile.bankInfo.bankId &&
+              profile.bankInfo.accountNo.trim() &&
+              profile.bankInfo.accountName.trim()
             );
+            if (hasCompleteProfile) {
+              setShowJoinModal(true);
+            } else {
+              setShowProfileModal(true);
+            }
             return;
           }
 
@@ -145,13 +195,15 @@ function App() {
       unsubscribe();
     };
   }, [
-    activeRoomId,
     currentRoomId,
     profileUid,
     resetRoomState,
+    requestedRoomId,
     setCurrentRoom,
     setCurrentView,
     setError,
+    setShowJoinModal,
+    setShowProfileModal,
   ]);
 
   const enterRoom = useCallback(
@@ -165,6 +217,9 @@ function App() {
 
       setCurrentRoom(room);
       setCurrentView('dashboard');
+      writeRoomIdToLocation(room.id);
+      setRoomLocation({ kind: 'valid', roomId: room.id });
+      setPendingJoinRoomId(null);
 
       toast.success(
         action === 'created'
@@ -177,6 +232,9 @@ function App() {
 
   const handleLeaveRoom = useCallback(() => {
     resetRoomState();
+    writeRoomIdToLocation(null);
+    setRoomLocation({ kind: 'absent' });
+    setPendingJoinRoomId(null);
     toast.info('Đã rời phòng');
   }, [resetRoomState]);
 
@@ -257,6 +315,9 @@ function App() {
       <ProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
+        onSave={() => {
+          if (pendingJoinRoomId) setShowJoinModal(true);
+        }}
       />
 
       <CreateRoomModal
@@ -269,6 +330,7 @@ function App() {
         isOpen={showJoinModal}
         onClose={() => setShowJoinModal(false)}
         onRoomJoined={(roomId) => enterRoom(roomId, 'joined')}
+        initialRoomCode={pendingJoinRoomId}
       />
 
       <ScoreModal

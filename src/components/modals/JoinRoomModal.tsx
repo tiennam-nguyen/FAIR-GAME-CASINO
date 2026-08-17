@@ -11,20 +11,29 @@ interface JoinRoomModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRoomJoined: (roomId: string) => void;
+  initialRoomCode?: string | null;
 }
 
-export default function JoinRoomModal({ isOpen, onClose, onRoomJoined }: JoinRoomModalProps) {
+export default function JoinRoomModal({
+  isOpen,
+  onClose,
+  onRoomJoined,
+  initialRoomCode = null,
+}: JoinRoomModalProps) {
   const { userProfile } = useStore();
   const [roomCode, setRoomCode] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      setRoomCode(initialRoomCode ?? '');
+      setLocalError(null);
+    } else {
       setRoomCode('');
       setLocalError(null);
     }
-  }, [isOpen]);
+  }, [initialRoomCode, isOpen]);
 
   const handleJoin = async () => {
     if (roomCode.length !== 5) {

@@ -22,8 +22,72 @@ service cloud.firestore {
       return signedIn() && exists(playerPath(roomId, request.auth.uid));
     }
 
+    function validBankInfo(bankInfo) {
+      return bankInfo is map &&
+        bankInfo.keys().hasOnly(['bankId', 'bankName', 'accountNo', 'accountName']) &&
+        bankInfo.keys().hasAll(['bankId', 'bankName', 'accountNo', 'accountName']) &&
+        bankInfo.bankId is string &&
+        bankInfo.bankName is string &&
+        bankInfo.accountNo is string &&
+        bankInfo.accountName is string;
+    }
+
+    function validPlayer(playerId, data) {
+      return data is map &&
+        data.keys().hasOnly([
+          'uid', 'displayName', 'avatarUrl', 'bankInfo', 'currentScore',
+          'isOnline', 'joinedAt', 'lastActive'
+        ]) &&
+        data.keys().hasAll([
+          'uid', 'displayName', 'bankInfo', 'currentScore', 'isOnline', 'joinedAt'
+        ]) &&
+        data.uid == playerId &&
+        data.displayName is string &&
+        (!('avatarUrl' in data) || data.avatarUrl is string) &&
+        validBankInfo(data.bankInfo) &&
+        data.currentScore == 0 &&
+        data.isOnline is bool &&
+        data.joinedAt is int &&
+        (!('lastActive' in data) || data.lastActive is int);
+    }
+
+    function validRoomStatus(status) {
+      return status in ['active', 'settling', 'closed'];
+    }
+
+    function validGameConfig(config) {
+      return config is map &&
+        config.keys().hasOnly(['gameType', 'baseBet', 'rules']) &&
+        config.keys().hasAll(['gameType', 'baseBet', 'rules']) &&
+        config.gameType in ['tien_len', 'xi_dach', 'poker'] &&
+        config.baseBet is int &&
+        config.rules is map &&
+        config.rules.keys().hasOnly(['mode', 'price_nhat_bet', 'price_nhi_ba']) &&
+        config.rules.keys().hasAll(['mode', 'price_nhat_bet', 'price_nhi_ba']) &&
+        config.rules.mode in ['nhat_an_tat', 'nhat_bet_nhi_ba'] &&
+        config.rules.price_nhat_bet is int &&
+        config.rules.price_nhi_ba is int;
+    }
+
+    function validRoom(data) {
+      return data is map &&
+        data.keys().hasOnly(['hostId', 'status', 'createdAt', 'gameConfig', 'metadata']) &&
+        data.keys().hasAll(['hostId', 'status', 'createdAt', 'gameConfig', 'metadata']) &&
+        data.hostId is string &&
+        validRoomStatus(data.status) &&
+        data.createdAt is int &&
+        validGameConfig(data.gameConfig) &&
+        data.metadata is map &&
+        data.metadata.keys().hasOnly(['totalRounds', 'playerCount', 'lastUpdated']) &&
+        data.metadata.keys().hasAll(['totalRounds', 'playerCount', 'lastUpdated']) &&
+        data.metadata.totalRounds is int &&
+        data.metadata.playerCount is int &&
+        data.metadata.lastUpdated is int;
+    }
+
     function isAtomicJoin(roomId) {
       return signedIn() &&
+        validRoom(request.resource.data) &&
         resource.data.status == 'active' &&
         request.resource.data.hostId == resource.data.hostId &&
         request.resource.data.createdAt == resource.data.createdAt &&
@@ -38,12 +102,20 @@ service cloud.firestore {
 
     function isHostRoomUpdate(roomId) {
       return isHost(roomId) &&
+        validRoom(request.resource.data) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'metadata']) &&
         request.resource.data.hostId == resource.data.hostId &&
         request.resource.data.createdAt == resource.data.createdAt &&
         request.resource.data.gameConfig == resource.data.gameConfig &&
         request.resource.data.metadata.playerCount == resource.data.metadata.playerCount &&
         request.resource.data.metadata.totalRounds >= resource.data.metadata.totalRounds - 1 &&
         request.resource.data.metadata.totalRounds <= resource.data.metadata.totalRounds + 1 &&
+        (
+          request.resource.data.status == resource.data.status ||
+          (resource.data.status == 'active' && request.resource.data.status == 'settling') ||
+          (resource.data.status == 'settling' && request.resource.data.status in ['active', 'closed'])
+        ) &&
         (
           request.resource.data.metadata.totalRounds == resource.data.metadata.totalRounds ||
           (
@@ -98,10 +170,12 @@ service cloud.firestore {
       allow list: if false;
 
       allow create: if signedIn() &&
+        validRoom(request.resource.data) &&
         request.resource.data.hostId == request.auth.uid &&
         request.resource.data.status == 'active' &&
         request.resource.data.metadata.totalRounds == 0 &&
-        request.resource.data.metadata.playerCount == 1;
+        request.resource.data.metadata.playerCount == 1 &&
+        getAfter(playerPath(roomId, request.auth.uid)).data.uid == request.auth.uid;
 
       allow update: if isHostRoomUpdate(roomId) || isAtomicJoin(roomId);
 
@@ -120,8 +194,7 @@ service cloud.firestore {
         // Player creation must be coupled to room creation or an atomic playerCount increment.
         allow create: if signedIn() &&
           request.auth.uid == playerId &&
-          request.resource.data.uid == playerId &&
-          request.resource.data.currentScore == 0 &&
+          validPlayer(playerId, request.resource.data) &&
           getAfter(roomPath(roomId)).data.status == 'active' &&
           (
             (
@@ -151,7 +224,16 @@ service cloud.firestore {
 
         allow create: if isHost(roomId) &&
           get(roomPath(roomId)).data.status == 'active' &&
+          request.resource.data is map &&
+          request.resource.data.keys().hasOnly([
+            'roundNumber', 'timestamp', 'gameType', 'scores', 'createdBy'
+          ]) &&
+          request.resource.data.keys().hasAll([
+            'roundNumber', 'timestamp', 'gameType', 'scores', 'createdBy'
+          ]) &&
           request.resource.data.createdBy == request.auth.uid &&
+          request.resource.data.timestamp is int &&
+          request.resource.data.gameType == get(roomPath(roomId)).data.gameConfig.gameType &&
           request.resource.data.roundNumber is int &&
           request.resource.data.roundNumber == get(roomPath(roomId)).data.metadata.totalRounds + 1 &&
           getAfter(roomPath(roomId)).data.metadata.totalRounds == request.resource.data.roundNumber &&

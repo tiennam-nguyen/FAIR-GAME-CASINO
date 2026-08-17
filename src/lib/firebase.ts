@@ -7,7 +7,10 @@ import {
   type User,
 } from 'firebase/auth';
 import {
-  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  connectFirestoreEmulator,
   collection,
   doc,
   getDoc,
@@ -19,11 +22,11 @@ import {
   startAfter,
   writeBatch,
   getDocs,
-  enableIndexedDbPersistence,
   runTransaction,
   type Firestore,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore';
+import { connectAuthEmulator } from 'firebase/auth';
 
 import type { Room, Player, Transaction, RoundScore, BankInfo } from '@/types';
 
@@ -58,15 +61,13 @@ if (hasFirebaseConfig) {
   try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
-    db = getFirestore(app);
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    });
 
-    if (typeof window !== 'undefined') {
-      enableIndexedDbPersistence(db).catch((error: { code?: string }) => {
-        // Multi-tab and unsupported-browser failures are safe fallbacks to online-only mode.
-        if (!['failed-precondition', 'unimplemented'].includes(error.code ?? '')) {
-          console.warn('Không thể bật Firestore offline cache.');
-        }
-      });
+    if (import.meta.env.VITE_FIREBASE_USE_EMULATORS === 'true') {
+      connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+      connectFirestoreEmulator(db, '127.0.0.1', 8080);
     }
   } catch {
     console.error('Không thể khởi tạo Firebase. Kiểm tra biến môi trường deploy.');
